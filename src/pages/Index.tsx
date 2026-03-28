@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import Icon from "@/components/ui/icon";
+import AuthScreen from "@/components/AuthScreen";
+import { loadSession, clearSession, logout, User } from "@/lib/auth";
 
 type Section = "chats" | "contacts" | "media" | "history" | "settings";
 
@@ -56,6 +58,10 @@ const HISTORY = [
 ];
 
 export default function Index() {
+  const session = loadSession();
+  const [authUser, setAuthUser] = useState<User | null>(session?.user ?? null);
+  const [authToken, setAuthToken] = useState<string>(session?.token ?? "");
+
   const [section, setSection] = useState<Section>("chats");
   const [activeContact, setActiveContact] = useState<Contact>(CONTACTS[0]);
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
@@ -68,6 +74,8 @@ export default function Index() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -87,6 +95,19 @@ export default function Index() {
     const m = Math.floor(s / 60);
     return `${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
   };
+
+  if (!authUser) {
+    return <AuthScreen onAuth={(token, user) => { setAuthToken(token); setAuthUser(user); }} />;
+  }
+
+  const handleLogout = async () => {
+    await logout(authToken);
+    clearSession();
+    setAuthUser(null);
+    setAuthToken("");
+  };
+
+  const myInitials = authUser.display_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
   const sendMessage = () => {
     if (!inputText.trim()) return;
@@ -142,10 +163,14 @@ export default function Index() {
             </span>
           </button>
         ))}
-        <div className="mt-auto">
-          <div className="w-8 h-8 rounded-full bg-[hsl(142,72%,40%,0.2)] border border-[hsl(142,72%,50%,0.4)] flex items-center justify-center text-xs font-semibold text-[hsl(142,72%,60%)]">
-            Я
-          </div>
+        <div className="mt-auto flex flex-col items-center gap-2">
+          <button
+            onClick={handleLogout}
+            title="Выйти"
+            className="w-8 h-8 rounded-full bg-[hsl(180,80%,22%,0.3)] border border-[hsl(180,100%,50%,0.25)] flex items-center justify-center text-xs font-bold text-[hsl(180,100%,60%)] hover:bg-[hsl(180,80%,22%,0.5)] transition-colors"
+          >
+            {myInitials}
+          </button>
         </div>
       </aside>
 
@@ -449,13 +474,12 @@ export default function Index() {
                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Профиль</div>
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-[hsl(180,80%,22%,0.3)] border border-[hsl(180,100%,50%,0.2)] flex items-center justify-center text-lg font-semibold text-[hsl(180,100%,60%)]">
-                    Я
+                    {myInitials}
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-[hsl(210,20%,88%)]">Мой аккаунт</div>
-                    <div className="text-xs text-muted-foreground">@username</div>
+                    <div className="font-medium text-[hsl(210,20%,88%)]">{authUser.display_name}</div>
+                    <div className="text-xs text-muted-foreground">@{authUser.username}</div>
                   </div>
-                  <button className="text-xs text-[hsl(180,80%,50%)] hover:underline">Изменить</button>
                 </div>
               </div>
 
@@ -502,7 +526,7 @@ export default function Index() {
               </div>
 
               <div className="p-4 rounded-xl border border-[hsl(0,72%,40%,0.3)] bg-[hsl(0,72%,40%,0.05)]">
-                <button className="w-full flex items-center gap-2 text-sm text-[hsl(0,72%,55%)] hover:text-[hsl(0,72%,65%)] transition-colors">
+                <button onClick={handleLogout} className="w-full flex items-center gap-2 text-sm text-[hsl(0,72%,55%)] hover:text-[hsl(0,72%,65%)] transition-colors">
                   <Icon name="LogOut" size={15} />
                   Выйти из аккаунта
                 </button>
