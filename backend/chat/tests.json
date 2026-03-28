@@ -1,0 +1,13 @@
+{
+  "tests": [
+    {
+      "name": "No token - should fail",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "users", "token": ""},
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
